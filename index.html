@@ -43,7 +43,7 @@
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState, useMemo } = React;
+const { useState, useMemo, useEffect } = React;
 
 /* ---------- icons (lucide-style, inline) ---------- */
 const P = {
@@ -80,7 +80,12 @@ const T = {
     inputs: "Audit Inputs", meta: "Salesperson Metadata", name: "Name", staff: "Staff ID", tenure: "Tenure (months)",
     agreed: "Agreed Base Salary (LCB Thỏa thuận)", mkt: "MKT KPI Achievement", att: "Attendance Ratio",
     std: "Standard days", act: "Actual days", sales: "Sales KPI Performance", met: "Met", missed: "Missed",
-    tier: "Consecutive Miss Tier", t1: "Month 1 - 20% Hold", t2: "Month 2 - 30% Hold", t3: "Month 3+ - 50% Hold / Zero Base",
+    tier: "Consecutive Miss Tier", t1: "Month 2 (1st miss) - 20% Hold", t2: "Month 3 (2nd miss) - 30% Hold", t3: "Month 4 (3rd miss) - 50% Hold", t4: "Month 5+ - Commission-Only / Zero Base",
+    prob: "Probation Period (Tháng 1 - Thử việc)", probD: "Month 1: no KPI applied. MKT = 100%, Sales KPI = Exempt, Hold = 0%.", probLock: "Locked by Probation", exempt: "Exempt",
+    probBadge: "PROBATION / THỬ VIỆC - NO KPI", commOnly: "COMMISSION-ONLY / ZERO BASE SALARY", nextComm: "COMMISSION-ONLY", probF: "Probation", all: "All",
+    polT: "Policy & Legal Compliance", polSub: "Progressive salary withholding ladder (applied on Attendance Salary)",
+    lad: [["Month 1 · Probation", "0%", "No KPI applied. Full base, paid by working days."], ["Month 2 · 1st miss", "20%", "Hold on Attendance Salary."], ["Month 3 · 2nd consecutive miss", "30%", "Hold on Attendance Salary."], ["Month 4 · 3rd consecutive miss", "50%", "Hold on Attendance Salary."], ["Month 5+ · Still missing", "0 base", "COMMISSION-ONLY / ZERO BASE SALARY until sales improve."]],
+    polNote: "Target met in a month: no hold that month, and the tier resets to 20% for the next possible miss. 2 consecutive months met: previous month's hold is reimbursed.",
     exc: "Policy Exception Toggles", sb: "Apply Standby Safety Net", sbTag: "Tenure >= 6m, 1 use / 3 months",
     sbElig: "Eligible", sbNo: "Not eligible", lastUse: "Months since last use",
     acc: "Accelerated 2x Performance", accD: "Triggers previous month reimbursement",
@@ -90,7 +95,7 @@ const T = {
     rHold: "Sales Hold Deduction", rSb: "Hold suspended by Standby", final: "FINAL PAYOUT", step: "Step",
     pending: "Pending reimbursement (not in cash payout)", accEst: "Previous-month hold (estimate)", brkOk: "Full-year reimbursement: eligible, amount from hold ledger", brkNo: "Breakout thresholds not met",
     pass: "PASS", hold: "HOLD", standby: "STANDBY ACTIVE", reset: "RESET TIER TO 20% NEXT MONTH", next: "NEXT MONTH TIER", zero: "ZERO BASE RISK",
-    batch: "Batch Audit", sub: "Mock data preview", cols: ["Staff ID","Name","Region","MKT %","Attendance","Sales KPI","Hold %","Final Payout","Status","Action"],
+    batch: "Batch Audit", sub: "Mock data preview", cols: ["Staff ID","Name","Region","Probation","MKT %","Attendance","Sales KPI","Hold %","Final Payout","Status","Action"],
     audit: "Audit", loaded: "Loaded", legalT: "Remote Partner Contract Policy",
     legal: "All Remote Sales (VN & Global) operate under Remote/Part-time Agreements. Zero-Base & Salary Withholding policies are 100% compliant with partner agreements.",
     totalPayout: "Batch total payout", exportOne: "Export Excel", exportBatch: "Export batch (.xlsx)", copyTbl: "Copy as table", exported: "Excel file created", copied: "Copied. Paste into Excel or Google Sheets.", exportFail: "Download is blocked here. Use Copy as table instead.", shAudit: "Audit Result", shBatch: "Batch Audit", exTitle: "WeMasterTrade KPI Audit", exNext: "Next month tier", exStatus: "Status", exPending: "Pending reimbursement (estimate)", exStep: "3-step calculation", exInput: "Inputs", yes: "Yes", no: "No", pr: "Philippines (PH)", vn: "Vietnam (VN)", tr: "Turkey (TR)", days: "days",
@@ -103,7 +108,12 @@ const T = {
     inputs: "Dữ liệu kiểm toán", meta: "Thông tin nhân viên Sales", name: "Họ tên", staff: "Mã NV", tenure: "Thâm niên (tháng)",
     agreed: "LCB Thỏa thuận", mkt: "Mức đạt KPI MKT", att: "Tỷ lệ chuyên cần",
     std: "Công chuẩn", act: "Công thực tế", sales: "Kết quả KPI Sales", met: "Đạt", missed: "Không đạt",
-    tier: "Cấp độ trượt liên tiếp", t1: "Tháng 1 - Giữ 20%", t2: "Tháng 2 - Giữ 30%", t3: "Tháng 3+ - Giữ 50% / Zero Base",
+    tier: "Cấp độ trượt liên tiếp", t1: "Tháng 2 (trượt lần 1) - Giữ 20%", t2: "Tháng 3 (trượt lần 2) - Giữ 30%", t3: "Tháng 4 (trượt lần 3) - Giữ 50%", t4: "Tháng 5+ - Chỉ hoa hồng / Zero Base",
+    prob: "Giai đoạn thử việc (Tháng 1)", probD: "Tháng 1: không áp KPI. MKT = 100%, KPI Sales = Miễn, Giữ = 0%.", probLock: "Khóa do thử việc", exempt: "Miễn KPI",
+    probBadge: "THỬ VIỆC - KHÔNG ÁP KPI", commOnly: "CHỈ HOA HỒNG / ZERO BASE SALARY", nextComm: "CHỈ HOA HỒNG", probF: "Thử việc", all: "Tất cả",
+    polT: "Chính sách & Tuân thủ pháp lý", polSub: "Lộ trình giam lương lũy tiến (tính trên Lương theo công)",
+    lad: [["Tháng 1 · Thử việc", "0%", "Không áp KPI. Hưởng đủ LCB, trả theo ngày công."], ["Tháng 2 · Trượt lần 1", "20%", "Giữ lại trên Lương theo công."], ["Tháng 3 · Trượt liên tiếp lần 2", "30%", "Giữ lại trên Lương theo công."], ["Tháng 4 · Trượt liên tiếp lần 3", "50%", "Giữ lại trên Lương theo công."], ["Tháng 5+ · Vẫn trượt", "0 LCB", "CHỈ HOA HỒNG / ZERO BASE SALARY cho đến khi doanh số cải thiện."]],
+    polNote: "Tháng đạt KPI: không bị giữ lương và bậc giữ được reset về 20% cho lần trượt kế tiếp. Đạt KPI 2 tháng liên tiếp: hoàn lại khoản giữ của tháng trước.",
     exc: "Ngoại lệ chính sách", sb: "Áp dụng Standby Safety Net", sbTag: "Thâm niên >= 6 tháng, 1 lần / 3 tháng",
     sbElig: "Đủ điều kiện", sbNo: "Chưa đủ điều kiện", lastUse: "Số tháng từ lần dùng gần nhất",
     acc: "Hiệu suất tăng tốc 2x", accD: "Kích hoạt hoàn lại tháng trước",
@@ -113,7 +123,7 @@ const T = {
     rHold: "Khoản giữ lại KPI Sales", rSb: "Giữ lại được tạm hoãn bởi Standby", final: "THỰC LÃNH", step: "Bước",
     pending: "Hoàn lại chờ xử lý (không nằm trong tiền mặt)", accEst: "Khoản giữ tháng trước (ước tính)", brkOk: "Hoàn lại cả năm: đủ điều kiện, số tiền theo sổ giữ lại", brkNo: "Chưa đạt ngưỡng đột phá",
     pass: "ĐẠT", hold: "GIỮ", standby: "STANDBY KÍCH HOẠT", reset: "ĐẶT LẠI VỀ 20% THÁNG SAU", next: "CẤP ĐỘ THÁNG SAU", zero: "NGUY CƠ ZERO BASE",
-    batch: "Kiểm toán hàng loạt", sub: "Dữ liệu mẫu", cols: ["Mã NV","Họ tên","Khu vực","MKT %","Chuyên cần","KPI Sales","Giữ %","Thực lãnh","Trạng thái","Thao tác"],
+    batch: "Kiểm toán hàng loạt", sub: "Dữ liệu mẫu", cols: ["Mã NV","Họ tên","Khu vực","Thử việc","MKT %","Chuyên cần","KPI Sales","Giữ %","Thực lãnh","Trạng thái","Thao tác"],
     audit: "Kiểm toán", loaded: "Đã tải", legalT: "Chính sách hợp đồng đối tác Remote",
     legal: "Toàn bộ Remote Sales (VN & Toàn cầu) làm việc theo Hợp đồng Remote/Part-time. Chính sách Zero-Base và giữ lương tuân thủ 100% thỏa thuận đối tác.",
     totalPayout: "Tổng thực lãnh lô", exportOne: "Xuất Excel", exportBatch: "Xuất cả lô (.xlsx)", copyTbl: "Sao chép bảng", exported: "Đã tạo file Excel", copied: "Đã sao chép. Dán vào Excel hoặc Google Sheets.", exportFail: "Môi trường này chặn tải file. Hãy dùng Sao chép bảng.", shAudit: "Kết quả kiểm toán", shBatch: "Kiểm toán hàng loạt", exTitle: "Kiểm toán KPI WeMasterTrade", exNext: "Cấp độ tháng sau", exStatus: "Trạng thái", exPending: "Hoàn lại chờ xử lý (ước tính)", exStep: "Tính lương 3 bước", exInput: "Dữ liệu đầu vào", yes: "Có", no: "Không", pr: "Philippines (PH)", vn: "Việt Nam (VN)", tr: "Thổ Nhĩ Kỳ (TR)", days: "ngày",
@@ -122,46 +132,51 @@ const T = {
 
 /* ---------- data ---------- */
 const RATES = [0.2, 0.3, 0.5];
-const mk = (id, name, mkt, act, met, tier, tenure, standby = false, last = 6) =>
-  ({ id, name, mkt, act, std: 26, met, tier, tenure, base: 10000000, standby, last, accel: false, brk: false, netUsd: 0, newIbs: 0 });
+const mk = (id, name, mkt, act, met, tier, tenure, standby = false, last = 6, prob = false) =>
+  ({ prob, id, name, mkt, act, std: 26, met, tier, tenure, base: 10000000, standby, last, accel: false, brk: false, netUsd: 0, newIbs: 0 });
 const DATA = {
   PH: [
     mk("WG-PH-001","Maria Santos",100,26,true,1,14),
     mk("WG-PH-002","Juan dela Cruz",75,24,false,1,8),
     mk("WG-PH-003","Angelica Reyes",50,25,false,2,5),
     mk("WG-PH-004","Paolo Mendoza",100,22,false,3,11,true,4),
-    mk("WG-PH-005","Katrina Villanueva",25,26,true,1,3),
+    mk("WG-PH-005","Katrina Villanueva",100,24,true,1,1,false,6,true),
   ],
   VN: [
     mk("WG-VN-001","Nguyễn Minh Anh",100,26,true,1,18),
     mk("WG-VN-002","Trần Quốc Bảo",75,24,false,1,9),
     mk("WG-VN-003","Lê Thu Hà",100,23,false,2,7),
-    mk("WG-VN-004","Phạm Đức Long",50,26,false,3,12),
-    mk("WG-VN-005","Võ Ngọc Trâm",0,20,true,1,4),
+    mk("WG-VN-004","Phạm Đức Long",50,26,false,4,12),
+    mk("WG-VN-005","Võ Ngọc Trâm",100,20,true,1,1,false,6,true),
   ],
   TR: [
     mk("WG-TR-001","Ayşe Yılmaz",100,26,true,1,10),
     mk("WG-TR-002","Mehmet Demir",75,25,false,1,6),
     mk("WG-TR-003","Elif Kaya",75,26,false,2,13),
     mk("WG-TR-004","Burak Şahin",50,21,false,3,8,true,5),
-    mk("WG-TR-005","Zeynep Arslan",100,26,true,1,2),
+    mk("WG-TR-005","Zeynep Arslan",100,25,true,1,1,false,6,true),
   ],
 };
 
 const fmt = (n) => Math.round(n).toLocaleString("en-US");
 function calc(s) {
-  const actual = s.base * s.mkt / 100;
+  const prob = !!s.prob;
+  const mktEff = prob ? 100 : s.mkt;
+  const metEff = prob ? true : s.met;
+  const actual = s.base * mktEff / 100;
   const att = s.std > 0 ? actual * Math.min(s.act, s.std) / s.std : 0;
-  const rate = s.met ? 0 : RATES[s.tier - 1];
+  const zero = !metEff && s.tier >= 4;
+  const rate = metEff ? 0 : zero ? 1 : RATES[s.tier - 1];
   const eligible = s.tenure >= 6 && s.last >= 3;
-  const standbyOn = s.standby && eligible && !s.met;
+  const standbyOn = s.standby && eligible && !metEff;
   const hold = standbyOn ? 0 : att * rate;
   const final = att - hold;
-  const nextTier = s.met ? 1 : standbyOn ? s.tier : Math.min(s.tier + 1, 3);
-  const accEst = att * RATES[s.tier - 1];
+  const nextTier = prob || metEff ? 1 : standbyOn ? s.tier : Math.min(s.tier + 1, 4);
+  const accEst = att * RATES[Math.min(s.tier, 3) - 1];
   const brkOk = s.netUsd >= 30000 && s.newIbs >= 2;
-  return { actual, att, rate, eligible, standbyOn, hold, final, nextTier, accEst, brkOk };
+  return { prob, mktEff, metEff, zero, actual, att, rate, eligible, standbyOn, hold, final, nextTier, accEst, brkOk };
 }
+const pctTxt = (c) => (c.zero ? "Zero Base" : `${Math.round(c.rate * 100)}%`);
 
 /* ---------- small UI parts ---------- */
 const Badge = ({ tone, children, icon }) => {
@@ -220,72 +235,83 @@ function App() {
   const [flash, setFlash] = useState("");
   const t = T[lang];
   const up = (k, v) => setS((p) => ({ ...p, [k]: v }));
+  const [probF, setProbF] = useState("all");
   const r = useMemo(() => calc(s), [s]);
-  const rows = useMemo(() => DATA[region].map((m) => ({ m, c: calc(m) })), [region]);
+  const rows = useMemo(() => DATA[region].map((m) => ({ m, c: calc(m) })).filter(({ m }) => probF === "all" || (probF === "yes") === !!m.prob), [region, probF]);
   const batchTotal = rows.reduce((a, x) => a + x.c.final, 0);
 
   const changeRegion = (code) => { setRegion(code); setS(DATA[code][0]); };
   const loadMember = (m) => { setS(m); setRegion(m.id.split("-")[1]); setFlash(m.name); window.scrollTo({ top: 0, behavior: "smooth" }); setTimeout(() => setFlash(""), 2200); };
   const [toast, setToast] = useState(null);
+  const [dl, setDl] = useState(null);
+  useEffect(() => { (async () => { try { setDl((await window.claude?.use?.("downloads")) || null); } catch (e) { setDl(null); } })(); }, []);
   const say = (kind, msg) => { setToast({ kind, msg }); setTimeout(() => setToast(null), 3500); };
-  const statusText = (m, c) => m.met ? t.pass : c.standbyOn ? t.standby : `${t.hold} ${Math.round(c.rate * 100)}%`;
+  const statusText = (m, c) => c.prob ? t.probBadge : c.metEff ? t.pass : c.standbyOn ? t.standby : c.zero ? t.commOnly : `${t.hold} ${Math.round(c.rate * 100)}%`;
   const cell = (v, f, z) => { const o = typeof v === "number" ? { t: "n", v } : { t: "s", v }; if (f) o.f = f; if (z) o.z = z; return o; };
   const buildWb = (scope) => {
     const wb = XLSX.utils.book_new();
     const N = "#,##0", PC = "0%";
     if (scope === "one") {
       const regC = s.id.split("-")[1] || region;
+      const nextTxt = r.nextTier >= 4 ? t.nextComm : null;
       const a = [
         [cell(t.exTitle)], [cell(`${month} · ${regionName[regC] || regC}`)], [],
         [cell(t.exInput)],
         [cell(t.name), cell(s.name)], [cell(t.staff), cell(s.id)], [cell(t.tenure), cell(s.tenure)],
+        [cell(t.probF), cell(r.prob ? t.yes : t.no)],
         [cell(t.agreed + " (VND)"), cell(s.base, null, N)],
-        [cell(t.mkt), cell(s.mkt / 100, null, PC)],
+        [cell(t.mkt), cell(r.mktEff / 100, null, PC)],
         [cell(t.std), cell(s.std)], [cell(t.act), cell(s.act)],
-        [cell(t.sales), cell(s.met ? t.met : t.missed)],
-        [cell(t.tier), cell(s.met ? 0 : RATES[s.tier - 1], null, PC)],
+        [cell(t.sales), cell(r.prob ? t.exempt : r.metEff ? t.met : t.missed)],
+        [cell("Hold %"), cell(r.rate, null, PC)],
         [cell(t.sb), cell(r.standbyOn ? t.yes : t.no)],
         [],
         [cell(t.exStep)],
-        [cell(`${t.step} 1 · ${t.rMkt}`), cell(r.actual, "B8*B9", N)],
-        [cell(`${t.step} 2 · ${t.rAtt}`), cell(r.att, "B17*MIN(B11,B10)/B10", N)],
-        [cell(`${t.step} 3 · ${t.rHold}`), cell(r.hold, `IF(B14="${t.yes}",0,B18*B13)`, N)],
-        [cell(t.final + " (VND)"), cell(r.final, "B18-B19", N)],
+        [cell(`${t.step} 1 · ${t.rMkt}`), cell(r.actual, "B9*B10", N)],
+        [cell(`${t.step} 2 · ${t.rAtt}`), cell(r.att, "B18*MIN(B12,B11)/B11", N)],
+        [cell(`${t.step} 3 · ${t.rHold}`), cell(r.hold, `IF(OR(B8="${t.yes}",B15="${t.yes}"),0,B19*B14)`, N)],
+        [cell(t.final + " (VND)"), cell(r.final, "B19-B20", N)],
         [],
         [cell(t.exStatus), cell(statusText(s, r))],
-        [cell(t.exNext), cell(RATES[r.nextTier - 1], null, PC)],
+        [cell(t.exNext), nextTxt ? cell(nextTxt) : cell(RATES[r.nextTier - 1], null, PC)],
       ];
       if (s.accel) a.push([cell(t.exPending), cell(r.accEst, null, N)]);
       if (s.brk) a.push([cell(t.brk), cell(r.brkOk ? t.brkOk : t.brkNo)]);
       const ws = XLSX.utils.aoa_to_sheet(a);
-      ws["!cols"] = [{ wch: 46 }, { wch: 28 }];
+      ws["!cols"] = [{ wch: 46 }, { wch: 34 }];
       XLSX.utils.book_append_sheet(wb, ws, t.shAudit.slice(0, 31));
     } else {
-      const head = [t.staff, t.name, t.region, t.agreed + " (VND)", "MKT %", t.std, t.act, t.sales, "Hold %", t.sb, t.rMkt, t.rAtt, t.rHold, t.final + " (VND)", t.exStatus].map((x) => cell(x));
+      const head = [t.staff, t.name, t.region, t.probF, t.agreed + " (VND)", "MKT %", t.std, t.act, t.sales, "Hold %", t.sb, t.rMkt, t.rAtt, t.rHold, t.final + " (VND)", t.exStatus].map((x) => cell(x));
       const body = rows.map(({ m, c }, i) => {
         const n = i + 2;
-        return [cell(m.id), cell(m.name), cell(m.id.split("-")[1]), cell(m.base, null, N), cell(m.mkt / 100, null, PC), cell(m.std), cell(m.act),
-          cell(m.met ? t.met : t.missed), cell(c.rate, null, PC), cell(c.standbyOn ? t.yes : t.no),
-          cell(c.actual, `D${n}*E${n}`, N), cell(c.att, `K${n}*MIN(G${n},F${n})/F${n}`, N),
-          cell(c.hold, `IF(J${n}="${t.yes}",0,L${n}*I${n})`, N), cell(c.final, `L${n}-M${n}`, N), cell(statusText(m, c))];
+        return [cell(m.id), cell(m.name), cell(m.id.split("-")[1]), cell(c.prob ? t.yes : t.no), cell(m.base, null, N), cell(c.mktEff / 100, null, PC), cell(m.std), cell(m.act),
+          cell(c.prob ? t.exempt : c.metEff ? t.met : t.missed), cell(c.rate, null, PC), cell(c.standbyOn ? t.yes : t.no),
+          cell(c.actual, `E${n}*F${n}`, N), cell(c.att, `L${n}*MIN(H${n},G${n})/G${n}`, N),
+          cell(c.hold, `IF(OR(D${n}="${t.yes}",K${n}="${t.yes}"),0,M${n}*J${n})`, N), cell(c.final, `M${n}-N${n}`, N), cell(statusText(m, c))];
       });
       const last = rows.length + 1;
-      const total = Array(15).fill(null).map(() => cell(""));
+      const total = Array(16).fill(null).map(() => cell(""));
       total[0] = cell(t.totalPayout);
-      total[13] = cell(batchTotal, `SUM(N2:N${last})`, N);
+      total[14] = cell(batchTotal, `SUM(O2:O${last})`, N);
       const ws = XLSX.utils.aoa_to_sheet([head, ...body, total]);
-      ws["!cols"] = [14, 22, 8, 16, 8, 8, 8, 10, 8, 10, 16, 16, 16, 16, 18].map((w) => ({ wch: w }));
-      ws["!freeze"] = { xSplit: 0, ySplit: 1 };
+      ws["!cols"] = [14, 22, 8, 10, 16, 8, 8, 8, 10, 8, 10, 16, 16, 16, 16, 30].map((w) => ({ wch: w }));
       XLSX.utils.book_append_sheet(wb, ws, t.shBatch.slice(0, 31));
     }
     return wb;
   };
-  const doExport = (scope) => {
-    try {
-      const name = scope === "one" ? `WG_KPI_Audit_${s.id}_${month.replace(" ", "-")}.xlsx` : `WG_KPI_Batch_${region}_${month.replace(" ", "-")}.xlsx`;
-      XLSX.writeFile(buildWb(scope), name);
-      say("ok", `${t.exported}: ${name}`);
-    } catch (e) { say("warn", t.exportFail); }
+  const doExport = async (scope) => {
+    const name = scope === "one" ? `WG_KPI_Audit_${s.id}_${month.replace(" ", "-")}.xlsx` : `WG_KPI_Batch_${region}_${month.replace(" ", "-")}.xlsx`;
+    let wb;
+    try { wb = buildWb(scope); } catch (e) { say("warn", t.exportFail); return; }
+    if (dl) {
+      try {
+        const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        await dl.save({ filename: name, data: buf });
+        say("ok", `${t.exported}: ${name}`);
+      } catch (e) { if (!e || e.code !== "declined") say("warn", t.exportFail); }
+    } else {
+      try { XLSX.writeFile(wb, name); say("ok", `${t.exported}: ${name}`); } catch (e) { say("warn", t.exportFail); }
+    }
   };
   const doCopy = async (scope) => {
     const wb = buildWb(scope);
@@ -293,7 +319,7 @@ function App() {
     try { await navigator.clipboard.writeText(tsv); say("ok", t.copied); }
     catch (e) { say("warn", t.exportFail); }
   };
-  const tierLabels = [t.t1, t.t2, t.t3];
+  const tierLabels = [t.t1, t.t2, t.t3, t.t4];
   const regionName = { PH: t.pr, VN: t.vn, TR: t.tr };
 
   const steps = [
@@ -378,6 +404,9 @@ function App() {
                     {["PH","VN","TR"].map((c) => <option key={c} value={c}>{regionName[c]}</option>)}
                   </select></div>
                 <div><Label htmlFor="i-ten">{t.tenure}</Label><input id="i-ten" type="number" min="0" className={`${inputCls} num`} value={s.tenure} onChange={(e) => up("tenure", Math.max(0, +e.target.value || 0))} /></div>
+                <div className="sm:col-span-2">
+                  <Toggle id="x-prob" on={!!s.prob} set={(v) => up("prob", v)} icon="clock" title={t.prob} desc={t.probD} />
+                </div>
               </div>
             </Panel>
 
@@ -392,11 +421,11 @@ function App() {
                   </div>
                 </div>
                 <div>
-                  <Label>{t.mkt}</Label>
+                  <Label>{t.mkt}{r.prob && <span className="ml-2 normal-case tracking-normal text-indigo-600">· {t.probLock}</span>}</Label>
                   <div className="grid grid-cols-5 gap-2" role="radiogroup" aria-label={t.mkt}>
                     {[100,75,50,25,0].map((v) => (
-                      <button key={v} role="radio" aria-checked={s.mkt === v} onClick={() => { up("mkt", v); setStep(1); }}
-                        className={`num rounded-md border py-2 text-sm font-semibold transition ${s.mkt === v ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400"}`}>{v}%</button>
+                      <button key={v} role="radio" disabled={r.prob} aria-checked={r.mktEff === v} onClick={() => { up("mkt", v); setStep(1); }}
+                        className={`num rounded-md border py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${r.mktEff === v ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400"}`}>{v}%</button>
                     ))}
                   </div>
                 </div>
@@ -417,14 +446,14 @@ function App() {
             <Panel title={t.sales} icon="trend" step={3} activeStep={step}>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t.sales}>
-                  <button role="radio" aria-checked={s.met} onClick={() => { up("met", true); setStep(3); }}
-                    className={`flex items-center justify-center gap-2 rounded-md border py-2.5 font-semibold transition ${s.met ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-emerald-400"}`}><Icon n="check" s={16} />{t.met}</button>
-                  <button role="radio" aria-checked={!s.met} onClick={() => { up("met", false); setStep(3); }}
-                    className={`flex items-center justify-center gap-2 rounded-md border py-2.5 font-semibold transition ${!s.met ? "border-rose-600 bg-rose-600 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-rose-400"}`}><Icon n="alert" s={16} />{t.missed}</button>
+                  <button role="radio" disabled={r.prob} aria-checked={r.metEff} onClick={() => { up("met", true); setStep(3); }}
+                    className={`flex items-center justify-center gap-2 rounded-md border py-2.5 font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${r.metEff ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-emerald-400"}`}><Icon n="check" s={16} />{r.prob ? t.exempt : t.met}</button>
+                  <button role="radio" disabled={r.prob} aria-checked={!r.metEff} onClick={() => { up("met", false); setStep(3); }}
+                    className={`flex items-center justify-center gap-2 rounded-md border py-2.5 font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${!r.metEff ? "border-rose-600 bg-rose-600 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-rose-400"}`}><Icon n="alert" s={16} />{t.missed}</button>
                 </div>
-                <div className={s.met ? "opacity-40" : ""}>
+                <div className={r.metEff ? "opacity-40" : ""}>
                   <Label htmlFor="i-tier">{t.tier}</Label>
-                  <select id="i-tier" className={inputCls} disabled={s.met} value={s.tier} onChange={(e) => up("tier", +e.target.value)}>
+                  <select id="i-tier" className={inputCls} disabled={r.metEff} value={s.tier} onChange={(e) => up("tier", +e.target.value)}>
                     {tierLabels.map((l, i) => <option key={i} value={i + 1}>{l}</option>)}
                   </select>
                 </div>
@@ -466,9 +495,9 @@ function App() {
                 <dl className="space-y-0 px-5 py-3">
                   {[
                     { k: t.rBase, v: fmt(s.base), tone: "text-slate-900", st: 0 },
-                    { k: `${t.rMkt} (${s.mkt}%)`, v: fmt(r.actual), tone: "text-slate-900", st: 1 },
+                    { k: `${t.rMkt} (${r.mktEff}%)`, v: fmt(r.actual), tone: "text-slate-900", st: 1 },
                     { k: `${t.rAtt} (${s.act}/${s.std})`, v: fmt(r.att), tone: "text-slate-900", st: 2 },
-                    { k: r.standbyOn ? t.rSb : `${t.rHold} (${Math.round(r.rate * 100)}%)`, v: r.hold ? `-${fmt(r.hold)}` : "0", tone: r.hold ? "text-rose-600" : "text-slate-500", st: 3 },
+                    { k: r.standbyOn ? t.rSb : `${t.rHold} (${pctTxt(r)})`, v: r.hold ? `-${fmt(r.hold)}` : "0", tone: r.hold ? "text-rose-600" : "text-slate-500", st: 3 },
                   ].map((row, i) => (
                     <div key={i} onClick={() => row.st && setStep(row.st)}
                       className={`flex items-baseline justify-between gap-3 border-b border-slate-100 py-2.5 last:border-0 ${row.st && step === row.st ? "-mx-2 rounded bg-indigo-50 px-2" : ""} ${row.st ? "cursor-pointer" : ""}`}>
@@ -492,11 +521,11 @@ function App() {
                 </div>
                 <div className="border-t border-slate-100 px-5 py-4">
                   <div className="flex flex-wrap gap-2">
-                    {s.met ? <Badge tone="ok" icon="check">[{t.pass}]</Badge> : <Badge tone="bad" icon="alert">[{t.hold} {Math.round(r.rate * 100)}%]</Badge>}
+                    {r.prob && <Badge tone="info" icon="clock">[{t.probBadge}]</Badge>}
+                    {!r.prob && (r.metEff ? <Badge tone="ok" icon="check">[{t.pass}]</Badge> : r.zero ? <Badge tone="dark" icon="alert">[{t.commOnly}]</Badge> : <Badge tone="bad" icon="alert">[{t.hold} {Math.round(r.rate * 100)}%]</Badge>)}
                     {r.standbyOn && <Badge tone="warn" icon="shield">[{t.standby}]</Badge>}
-                    {s.met && <Badge tone="info" icon="refresh">[{t.reset}]</Badge>}
-                    {!s.met && <Badge tone={r.nextTier === 3 ? "bad" : "warn"} icon="clock">[{t.next}: {Math.round(RATES[r.nextTier - 1] * 100)}%]</Badge>}
-                    {!s.met && s.tier === 3 && <Badge tone="dark" icon="alert">[{t.zero}]</Badge>}
+                    {!r.prob && r.metEff && <Badge tone="info" icon="refresh">[{t.reset}]</Badge>}
+                    {!r.prob && !r.metEff && <Badge tone={r.nextTier >= 3 ? "bad" : "warn"} icon="clock">[{t.next}: {r.nextTier >= 4 ? t.nextComm : `${Math.round(RATES[r.nextTier - 1] * 100)}%`}]</Badge>}
                   </div>
                   <div className="mt-4 grid grid-cols-5 gap-2">
                     <button onClick={() => doExport("one")} className="col-span-3 flex items-center justify-center gap-2 rounded-md bg-emerald-600 px-3 py-2.5 font-semibold text-white transition hover:bg-emerald-700"><Icon n="download" s={16} />{t.exportOne}</button>
@@ -524,6 +553,12 @@ function App() {
             <div>
               <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-slate-700"><Icon n="file" s={16} c="text-indigo-600" />{t.batch} · {regionName[region]}</h2>
               <p className="mt-0.5 text-xs text-slate-500">{t.sub} · {month}</p>
+              <div className="mt-2 flex items-center gap-2">
+                <label htmlFor="f-prob" className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{t.probF}</label>
+                <select id="f-prob" value={probF} onChange={(e) => setProbF(e.target.value)} className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs">
+                  <option value="all">{t.all}</option><option value="yes">{t.yes}</option><option value="no">{t.no}</option>
+                </select>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-4">
               <div className="text-right"><div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{t.totalPayout}</div><div className="num text-lg font-semibold">{fmt(batchTotal)} <span className="text-xs text-slate-400">VND</span></div></div>
@@ -534,10 +569,10 @@ function App() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left">
+            <table className="w-full min-w-[980px] text-left">
               <thead>
                 <tr className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500">
-                  {t.cols.map((c, i) => <th key={c} className={`px-4 py-2.5 font-semibold ${i === 7 ? "text-right" : ""}`}>{c}</th>)}
+                  {t.cols.map((c, i) => <th key={c} className={`px-4 py-2.5 font-semibold ${i === 8 ? "text-right" : ""}`}>{c}</th>)}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -548,12 +583,13 @@ function App() {
                       <td className="num px-4 py-3 text-xs text-slate-600">{m.id}</td>
                       <td className="px-4 py-3 font-medium">{m.name}</td>
                       <td className="px-4 py-3"><span className="num rounded bg-slate-100 px-1.5 py-0.5 text-xs font-semibold text-slate-600">{m.id.split("-")[1]}</span></td>
-                      <td className="num px-4 py-3">{m.mkt}%</td>
+                      <td className="px-4 py-3">{c.prob ? <Badge tone="info" icon="clock">{t.yes}</Badge> : <span className="text-xs text-slate-400">{t.no}</span>}</td>
+                      <td className="num px-4 py-3">{c.mktEff}%</td>
                       <td className="num px-4 py-3">{m.act}/{m.std}</td>
-                      <td className="px-4 py-3">{m.met ? <Badge tone="ok">{t.met}</Badge> : <Badge tone="bad">{t.missed}</Badge>}</td>
-                      <td className="num px-4 py-3">{c.standbyOn ? "0%" : `${Math.round(c.rate * 100)}%`}</td>
+                      <td className="px-4 py-3">{c.prob ? <Badge tone="info">{t.exempt}</Badge> : c.metEff ? <Badge tone="ok">{t.met}</Badge> : <Badge tone="bad">{t.missed}</Badge>}</td>
+                      <td className="num px-4 py-3">{c.standbyOn ? "0%" : pctTxt(c)}</td>
                       <td className="num px-4 py-3 text-right font-semibold">{fmt(c.final)}</td>
-                      <td className="px-4 py-3">{m.met ? <Badge tone="ok" icon="check">{t.pass}</Badge> : c.standbyOn ? <Badge tone="warn" icon="shield">{t.standby.split(" ")[0]}</Badge> : <Badge tone="bad" icon="alert">{t.hold} {Math.round(c.rate * 100)}%</Badge>}</td>
+                      <td className="px-4 py-3">{c.prob ? <Badge tone="info" icon="clock">{t.probBadge.split(" - ")[0]}</Badge> : c.metEff ? <Badge tone="ok" icon="check">{t.pass}</Badge> : c.standbyOn ? <Badge tone="warn" icon="shield">{t.standby.split(" ")[0]}</Badge> : c.zero ? <Badge tone="dark" icon="alert">ZERO BASE</Badge> : <Badge tone="bad" icon="alert">{t.hold} {Math.round(c.rate * 100)}%</Badge>}</td>
                       <td className="px-4 py-3">
                         <button onClick={() => loadMember(m)} className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${active ? "bg-indigo-600 text-white" : "border border-indigo-300 text-indigo-700 hover:bg-indigo-50"}`}>{t.audit}</button>
                       </td>
@@ -565,7 +601,24 @@ function App() {
           </div>
         </section>
 
-        {/* legal */}
+        {/* policy & legal */}
+        <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-5 py-4">
+            <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-slate-700"><Icon n="scale" s={16} c="text-indigo-600" />{t.polT}</h2>
+            <p className="mt-0.5 text-xs text-slate-500">{t.polSub}</p>
+          </div>
+          <ol className="grid gap-px bg-slate-100 sm:grid-cols-2 lg:grid-cols-5">
+            {t.lad.map(([k, v, d], i) => (
+              <li key={i} className="bg-white p-4">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{k}</div>
+                <div className={`num mt-1 text-2xl font-semibold ${i === 0 ? "text-indigo-600" : i === 4 ? "text-slate-900" : i === 3 ? "text-rose-600" : "text-amber-600"}`}>{v}</div>
+                <p className="mt-1 text-xs text-slate-500">{d}</p>
+              </li>
+            ))}
+          </ol>
+          <p className="border-t border-slate-100 px-5 py-3 text-xs text-slate-600">{t.polNote}</p>
+        </section>
+
         <section className="flex items-start gap-4 rounded-xl border border-slate-700 bg-slate-900 p-5 text-slate-200">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400"><Icon n="scale" s={20} /></span>
           <div className="min-w-0">
